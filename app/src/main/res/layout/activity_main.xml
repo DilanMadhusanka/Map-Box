@@ -12,6 +12,57 @@
         android:layout_height="match_parent"
         mapbox:mapbox_cameraTargetLat="6.927079"
         mapbox:mapbox_cameraTargetLng="79.861244"
-        mapbox:mapbox_cameraZoom="5.526846"/>
+        mapbox:mapbox_cameraZoom="10.526846"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_location_search"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:layout_margin="10dp"
+        android:tint="@android:color/white"
+        android:backgroundTint="@color/colorPrimary"
+        android:src="@drawable/ic_search"/>
+
+<!--    <TextView-->
+<!--        android:id="@+id/s"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_gravity="start|bottom"-->
+<!--        android:layout_margin="10dp"-->
+<!--        android:text="heo"-->
+<!--        android:textSize="15dp"-->
+<!--        android:textStyle="bold"/>-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/d"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_gravity="start|bottom"-->
+<!--        android:layout_marginBottom="30dp"-->
+<!--        android:textStyle="bold"-->
+<!--        android:textSize="15dp"-->
+<!--        android:text="Go"/>-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/distanceView"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="distance"-->
+<!--        android:textSize="20dp"-->
+<!--        android:textStyle="bold"-->
+<!--        android:layout_gravity="end|bottom"-->
+<!--        android:layout_marginBottom="10dp"-->
+<!--        android:layout_marginRight="70dp"/>-->
+
+<!--    <Button-->
+<!--        android:id="@+id/confirm"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Confirm"-->
+<!--        android:textSize="10dp"-->
+<!--        android:layout_gravity="bottom|center_horizontal"-->
+<!--        android:onClick="confirmed"-->
+<!--        />-->
 
 </FrameLayout>

@@ -59,6 +59,13 @@ public class MultipleRoutePathActivity extends AppCompatActivity implements OnMa
     private static final String DIRECTIONS_ROUTE_LINE_LAYER_ID = "directions-line-layer";
     private static final String SETTLEMENT_LABEL_LAYER_ID = "settlement-label";
 
+    private static final String CIRCLE_GEOJSON_SOURCE_ID2 = "CIRCLE_GEOJSON_SOURCE_ID2";
+    private static final String LINE_GEOJSON_SOURCE_ID2 = "LINE_GEOJSON_SOURCE_ID2";
+    private static final String STEPS_CIRCLE_LAYER_ID2 = "steps-circle-layer2";
+    private static final String STEPS_BACKGROUND_CIRCLE_LAYER_ID2 = "steps-background-circle-layer2";
+    private static final String DIRECTIONS_ROUTE_LINE_LAYER_ID2 = "directions-line-layer2";
+    private static final String SETTLEMENT_LABEL_LAYER_ID2 = "settlement-label2";
+
     // Adjust the following private static final variables to style this example's UI
     private static final String LINE_COLOR = "#EE2E23";
     private static final float LINE_WIDTH = 8f;
@@ -99,13 +106,17 @@ public class MultipleRoutePathActivity extends AppCompatActivity implements OnMa
         this.mapboxMap = mapboxMap;
         mapboxMap.setStyle(new Style.Builder().fromUri(Style.SATELLITE_STREETS)
                 .withSource(new GeoJsonSource(CIRCLE_GEOJSON_SOURCE_ID))
-                .withSource(new GeoJsonSource(LINE_GEOJSON_SOURCE_ID)), new Style.OnStyleLoaded() {
+                .withSource(new GeoJsonSource(LINE_GEOJSON_SOURCE_ID))
+                .withSource(new GeoJsonSource(LINE_GEOJSON_SOURCE_ID2))
+                .withSource(new GeoJsonSource(CIRCLE_GEOJSON_SOURCE_ID2)), new Style.OnStyleLoaded() {
             @Override
             public void onStyleLoaded(@NonNull Style style) {
                 initLineLayerForDirectionsRoute(style);
-                initStepManeuverCircleLayer(style);
-                initStepManeuverBackgroundCircleLayer(style);
+                initLineLayerForDirectionsRoute2(style);
+//                initStepManeuverCircleLayer(style);
+//                initStepManeuverBackgroundCircleLayer(style);
                 getRoute(origin, destination);
+                getRoute2(origin, Point.fromLngLat(	-109.533691, 46.965260));
                 mapboxMap.addOnMapClickListener(MultipleRoutePathActivity.this);
                 Toast.makeText(getApplicationContext(),
                         "getString(R.string.tap_on_map_to_change_destination)", Toast.LENGTH_SHORT).show();
@@ -131,6 +142,24 @@ public class MultipleRoutePathActivity extends AppCompatActivity implements OnMa
         // Add the layer below the "settlement-label" layer (city name labels, etc.)
         if (loadedMapStyle.getLayer(SETTLEMENT_LABEL_LAYER_ID) != null) {
             loadedMapStyle.addLayerBelow(directionsRouteLineLayer, SETTLEMENT_LABEL_LAYER_ID);
+        } else {
+            loadedMapStyle.addLayer(directionsRouteLineLayer);
+        }
+    }
+
+    private void initLineLayerForDirectionsRoute2(@NonNull Style loadedMapStyle) {
+        LineLayer directionsRouteLineLayer = new LineLayer(DIRECTIONS_ROUTE_LINE_LAYER_ID2, LINE_GEOJSON_SOURCE_ID2);
+        directionsRouteLineLayer.setProperties(
+                lineColor(Color.parseColor(LINE_COLOR)),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineWidth(LINE_WIDTH)
+        );
+
+        directionsRouteLineLayer.setFilter(eq(literal("$type"), literal("LineString")));
+
+        // Add the layer below the "settlement-label" layer (city name labels, etc.)
+        if (loadedMapStyle.getLayer(SETTLEMENT_LABEL_LAYER_ID2) != null) {
+            loadedMapStyle.addLayerBelow(directionsRouteLineLayer, SETTLEMENT_LABEL_LAYER_ID2);
         } else {
             loadedMapStyle.addLayer(directionsRouteLineLayer);
         }
@@ -167,7 +196,7 @@ public class MultipleRoutePathActivity extends AppCompatActivity implements OnMa
     @Override
     public boolean onMapClick(@NonNull LatLng point) {
         destination = Point.fromLngLat(point.getLongitude(), point.getLatitude());
-        getRoute(origin, destination);
+//        getRoute(origin, destination);
         return true;
     }
 
@@ -212,6 +241,83 @@ public class MultipleRoutePathActivity extends AppCompatActivity implements OnMa
                                 // Retrieve the sources from the map
                                 GeoJsonSource circleLayerSource = style.getSourceAs(CIRCLE_GEOJSON_SOURCE_ID);
                                 GeoJsonSource lineLayerSource = style.getSourceAs(LINE_GEOJSON_SOURCE_ID);
+                                if (circleLayerSource != null && response.body() != null) {
+
+                                    List<Feature> featureList = new ArrayList<>();
+
+                                    // Use each step maneuver's location to create a Point Feature.
+                                    // The Feature is then added to the list.
+                                    if (currentRoute.legs().size() > 0) {
+                                        for (LegStep singleRouteLeg : currentRoute.legs().get(0).steps()) {
+                                            Point stepManeuverLocationPoint = singleRouteLeg.maneuver().location();
+                                            featureList.add(Feature.fromGeometry(stepManeuverLocationPoint));
+                                        }
+                                    } else {
+                                        Timber.d("getString(R.string.no_legs_toast)");
+                                    }
+
+                                    // Update the CircleLayer's source with the Feature list.
+                                    circleLayerSource.setGeoJson(FeatureCollection.fromFeatures(featureList));
+
+                                    // Update the LineLayer's source with the Polyline route from the Directions API response.
+                                    if (lineLayerSource != null && currentRoute.geometry() != null) {
+                                        lineLayerSource.setGeoJson(Feature.fromGeometry(LineString.fromPolyline(
+                                                currentRoute.geometry(), PRECISION_6)));
+                                    }
+
+                                    // Ease the camera to fit to the Directions route.
+                                    easeCameraToShowEntireDirectionsRoute(new LatLng(origin.latitude(), origin.longitude()),
+                                            new LatLng(destination.latitude(), destination.longitude()));
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DirectionsResponse> call, Throwable throwable) {
+                Timber.e(throwable);
+                Toast.makeText(MultipleRoutePathActivity.this,
+                        String.format("Error: %s", throwable.getMessage()),
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void getRoute2(Point origin, Point destination) {
+        MapboxDirections directionsApiClient = MapboxDirections.builder()
+                .origin(origin)
+                .destination(destination)
+                .overview(DirectionsCriteria.OVERVIEW_FULL)
+                .profile(DirectionsCriteria.PROFILE_DRIVING)
+                .steps(true)
+                .accessToken(getString(R.string.mapbox_access_token))
+                .build();
+
+        directionsApiClient.enqueueCall(new Callback<DirectionsResponse>() {
+            @Override
+            public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
+                Timber.d("Response code: %s", response.code());
+                if (response.body() == null) {
+                    Timber.e("Response body null. Try again later.");
+                    Toast.makeText(MultipleRoutePathActivity.this,
+                            "getString(R.string.response_body_null)", Toast.LENGTH_SHORT).show();
+                } else if (response.body().routes().size() < 1) {
+                    Timber.e("No routes found");
+                    Toast.makeText(MultipleRoutePathActivity.this,
+                            "getString(R.string.no_routes_found)", Toast.LENGTH_SHORT).show();
+                } else {
+                    // Get the directions route
+                    if (response.body() != null) {
+                        // Get the directions route
+                        currentRoute = response.body().routes().get(0);
+                        mapboxMap.getStyle(new Style.OnStyleLoaded() {
+                            @Override
+                            public void onStyleLoaded(@NonNull Style style) {
+                                // Retrieve the sources from the map
+                                GeoJsonSource circleLayerSource = style.getSourceAs(CIRCLE_GEOJSON_SOURCE_ID2);
+                                GeoJsonSource lineLayerSource = style.getSourceAs(LINE_GEOJSON_SOURCE_ID2);
                                 if (circleLayerSource != null && response.body() != null) {
 
                                     List<Feature> featureList = new ArrayList<>();
